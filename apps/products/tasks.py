@@ -7,6 +7,7 @@ import logging
 import httpx
 from celery import shared_task
 from django.db import transaction
+from django.utils import timezone
 
 from .models import Product, Supplier
 
@@ -37,8 +38,13 @@ def sync_supplier_inventory(self, supplier_code: str | None = None) -> dict[str,
 
 def _sync_one(supplier: Supplier) -> int:
     url = f"{supplier.api_base_url.rstrip('/')}/inventory"
-    response = httpx.get(url, timeout=20.0)
-    response.raise_for_status()
+    try:
+        response = httpx.get(url, timeout=20.0)
+        response.raise_for_status()
+    except httpx.HTTPError:
+        supplier.sync_status = Supplier.SyncStatus.FAILED
+        supplier.save(update_fields=["sync_status", "updated_at"])
+        raise
     payload = response.json()
     items = payload.get("items", [])
     count = 0
@@ -49,4 +55,7 @@ def _sync_one(supplier: Supplier) -> int:
             if not sku or stock is None:
                 continue
             count += Product.objects.filter(supplier=supplier, sku=sku).update(stock_level=int(stock))
+        supplier.sync_status = Supplier.SyncStatus.OK
+        supplier.last_synced_at = timezone.now()
+        supplier.save(update_fields=["sync_status", "last_synced_at", "updated_at"])
     return count

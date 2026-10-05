@@ -39,6 +39,13 @@ class Order(TimeStampedModel):
     tracking_url = models.URLField(blank=True)
     forwarded_at = models.DateTimeField(null=True, blank=True)
     fulfilled_at = models.DateTimeField(null=True, blank=True)
+    shipping_route = models.ForeignKey(
+        "orders.ShippingRoute",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="orders",
+    )
     metadata = models.JSONField(default=dict, blank=True)
 
     class Meta:
@@ -85,3 +92,39 @@ class OrderItem(TimeStampedModel):
     @property
     def line_total(self) -> Decimal:
         return self.unit_price * self.quantity
+
+
+class ShippingRoute(TimeStampedModel):
+    """A lane the store uses to choose a carrier for an end-customer address."""
+
+    class ServiceLevel(models.TextChoices):
+        STANDARD = "standard", "Standard"
+        EXPRESS = "express", "Express"
+
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name="shipping_routes")
+    name = models.CharField(max_length=120)
+    carrier = models.CharField(max_length=64)
+    service_level = models.CharField(
+        max_length=16,
+        choices=ServiceLevel.choices,
+        default=ServiceLevel.STANDARD,
+    )
+    regions = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Country codes this lane accepts. Use ROW as the catch-all.",
+    )
+    priority = models.PositiveIntegerField(default=100)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ("priority", "name")
+        constraints = [
+            models.UniqueConstraint(fields=("tenant", "name"), name="orders_unique_route_name"),
+        ]
+        indexes = [
+            models.Index(fields=("tenant", "is_active", "priority"), name="orders_route_tenant_pri_idx"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.carrier})"

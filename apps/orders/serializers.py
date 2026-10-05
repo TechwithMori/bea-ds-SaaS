@@ -6,9 +6,11 @@ from django.db import transaction
 from django.db.transaction import on_commit
 from rest_framework import serializers
 
+from apps.customers.services import record_order_customer
 from apps.products.models import StoreProduct
 
-from .models import Order, OrderItem
+from .models import Order, OrderItem, ShippingRoute
+from .routing import assign_route
 from .tasks import forward_order_to_supplier
 
 
@@ -27,6 +29,8 @@ class OrderItemWriteSerializer(serializers.Serializer):
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
     lines = OrderItemWriteSerializer(many=True, write_only=True)
+    route_name = serializers.SerializerMethodField()
+    route_carrier = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
@@ -49,6 +53,8 @@ class OrderSerializer(serializers.ModelSerializer):
             "fulfilled_at",
             "items",
             "lines",
+            "route_name",
+            "route_carrier",
             "created_at",
         )
         read_only_fields = (
@@ -63,6 +69,8 @@ class OrderSerializer(serializers.ModelSerializer):
             "tracking_url",
             "forwarded_at",
             "fulfilled_at",
+            "route_name",
+            "route_carrier",
             "created_at",
         )
 
@@ -97,12 +105,13 @@ class OrderSerializer(serializers.ModelSerializer):
         lines: list[tuple[StoreProduct, int]] = validated_data.pop("resolved_lines")
         validated_data.pop("lines")
         tenant = self.context["request"].tenant
+        validated_data["currency"] = tenant.currency
         with transaction.atomic():
             order = Order.objects.create(
                 tenant=tenant,
                 number=self._next_number(tenant.id),
-                currency=tenant.currency,
                 status=Order.Status.PAID,
+                shipping_route=assign_route(tenant, validated_data.get("shipping_address")),
                 **validated_data,
             )
             OrderItem.objects.bulk_create(
@@ -121,8 +130,15 @@ class OrderSerializer(serializers.ModelSerializer):
             )
             order.recalculate_totals()
             order.save(update_fields=["subtotal", "total", "updated_at"])
+            record_order_customer(order)
         on_commit(lambda: forward_order_to_supplier.delay(str(order.id)))
         return order
+
+    def get_route_name(self, order: Order) -> str:
+        return order.shipping_route.name if order.shipping_route_id else ""
+
+    def get_route_carrier(self, order: Order) -> str:
+        return order.shipping_route.carrier if order.shipping_route_id else ""
 
     @staticmethod
     def _next_number(tenant_id: object) -> str:
@@ -133,3 +149,22 @@ class OrderSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         data["total"] = str(Decimal(data["total"]))
         return data
+
+
+class ShippingRouteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ShippingRoute
+        fields = (
+            "id",
+            "name",
+            "carrier",
+            "service_level",
+            "regions",
+            "priority",
+            "is_active",
+            "updated_at",
+        )
+        read_only_fields = ("id", "updated_at")
+
+    def create(self, validated_data: dict) -> ShippingRoute:
+        return ShippingRoute.objects.create(tenant=self.context["request"].tenant, **validated_data)

@@ -10,14 +10,14 @@ class ProductVariantInline(admin.TabularInline):
 
 @admin.register(Supplier)
 class SupplierAdmin(admin.ModelAdmin):
-    list_display = ("name", "code", "is_active")
+    list_display = ("name", "code", "is_active", "sync_status", "last_synced_at")
     search_fields = ("name", "code")
 
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ("title", "sku", "category", "wholesale_price", "stock_level", "supplier")
-    list_filter = ("category", "is_active", "supplier")
+    list_display = ("title", "sku", "category", "wholesale_price", "stock_level", "compliance_status", "supplier")
+    list_filter = ("category", "is_active", "compliance_status", "supplier")
     search_fields = ("title", "sku", "brand", "supplier_sku")
     inlines = (ProductVariantInline,)
 

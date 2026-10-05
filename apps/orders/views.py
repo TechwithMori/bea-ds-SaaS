@@ -8,18 +8,20 @@ from typing import Any
 from django.conf import settings
 from django.utils import timezone
 from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.tenants.mixins import WorkspaceMixin
 from apps.tenants.permissions import IsTenantMember
 
-from .models import Order
-from .serializers import OrderSerializer
+from .models import Order, ShippingRoute
+from .serializers import OrderSerializer, ShippingRouteSerializer
 
 
-class OrderViewSet(viewsets.ModelViewSet):
+class OrderViewSet(WorkspaceMixin, viewsets.ModelViewSet):
     """Tenant-scoped orders. Create forwards fulfillment asynchronously."""
 
     serializer_class = OrderSerializer
@@ -27,7 +29,40 @@ class OrderViewSet(viewsets.ModelViewSet):
     http_method_names = ("get", "post", "head", "options")
 
     def get_queryset(self):  # type: ignore[no-untyped-def]
-        return Order.objects.filter(tenant=self.request.tenant).prefetch_related("items")
+        return (
+            Order.objects.filter(tenant=self.request.tenant)
+            .select_related("shipping_route")
+            .prefetch_related("items")
+        )
+
+    @action(detail=False, methods=["get"])
+    def summary(self, request: Request) -> Response:
+        """Counts for the fulfillment board lanes."""
+        qs = self.get_queryset()
+
+        def count_for(*statuses: str) -> int:
+            return qs.filter(status__in=statuses).count()
+
+        return Response(
+            {
+                "pending": count_for(Order.Status.PENDING),
+                "processing": count_for(Order.Status.PAID, Order.Status.FORWARDED),
+                "shipped": count_for(Order.Status.FULFILLED),
+                "exceptions": count_for(Order.Status.CANCELLED, Order.Status.FAILED),
+            }
+        )
+
+
+class ShippingRouteViewSet(WorkspaceMixin, viewsets.ModelViewSet):
+    """Carrier lanes used to route a destination to a shipper."""
+
+    serializer_class = ShippingRouteSerializer
+    permission_classes = (IsAuthenticated, IsTenantMember)
+    pagination_class = None
+    http_method_names = ("get", "post", "patch", "delete", "head", "options")
+
+    def get_queryset(self):  # type: ignore[no-untyped-def]
+        return ShippingRoute.objects.filter(tenant=self.request.tenant)
 
 
 class SupplierFulfillmentWebhookView(APIView):

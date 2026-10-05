@@ -3,6 +3,7 @@ from __future__ import annotations
 from rest_framework import serializers
 
 from .models import Tenant
+from .provision import ensure_store_defaults
 
 
 class TenantSerializer(serializers.ModelSerializer):
@@ -32,4 +33,6 @@ class TenantSerializer(serializers.ModelSerializer):
         owner = self.context["request"].user
         is_first = not Tenant.objects.filter(owner=owner).exists()
         validated_data.setdefault("is_default", is_first)
-        return Tenant.objects.create(owner=owner, **validated_data)
+        tenant = Tenant.objects.create(owner=owner, **validated_data)
+        ensure_store_defaults(tenant)
+        return tenant

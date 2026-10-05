@@ -21,7 +21,36 @@ docker compose exec web python manage.py migrate
 docker compose exec web python manage.py createsuperuser
 ```
 
-API docs: http://localhost:8000/api/docs/
+API docs: http://localhost:8010/api/docs/
+
+The Compose web service listens on port **8010**.
+
+## Dashboard
+
+The operator dashboard is a Vite app in `frontend/`. It talks to the API through a dev proxy.
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+Open http://localhost:5173. Register a store, or choose **Tour the sample workspace** to walk every desk with illustrative data. To fill the API with a live demo store:
+
+```powershell
+docker compose exec web python manage.py seed_workspace
+```
+
+Sign in as `iris@lumenatelier.test` / `bea-drops-demo`.
+
+Desk endpoints, all under `/api/v1/` and scoped with `X-Tenant-Slug` unless noted:
+
+- Sourcing: `sourcing/overview/`, `catalog/`, `store-products/`
+- Growth: `marketing/assets/`, `marketing/hooks/`, `marketing/integrations/`, `marketing/spend/`
+- Shop: `storefront/config/`, `storefront/bundles/`
+- Logistics: `orders/`, `orders/summary/`, `shipping-routes/`
+- Retention: `customers/`, `inquiries/`, `retention-triggers/`
+- Finance: `analytics/overview/?days=30`
 
 ## First requests
 
@@ -36,4 +65,9 @@ API docs: http://localhost:8000/api/docs/
 - `apps/authentication/` email user and JWT
 - `apps/tenants/` store instances, middleware, membership permission
 - `apps/products/` global supplier catalog plus per-store listings
-- `apps/orders/` customer orders, async supplier forward, fulfillment webhook
+- `apps/orders/` customer orders, shipping lanes, async supplier forward, fulfillment webhook
+- `apps/marketing/` creative assets, hooks, channel connections, ad spend
+- `apps/storefront/` theme, conversion settings, bundles
+- `apps/customers/` buyers, inquiries, retention triggers
+- `apps/analytics/` revenue, AOV, CAC, and margin
+- `frontend/` React operator dashboard

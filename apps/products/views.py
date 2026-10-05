@@ -2,11 +2,16 @@ from __future__ import annotations
 
 from rest_framework import mixins, viewsets
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.request import Request
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
+from apps.tenants.mixins import WorkspaceMixin
 from apps.tenants.permissions import IsTenantMember
 
 from .models import Product, StoreProduct
 from .serializers import ProductSerializer, StoreProductSerializer
+from .sourcing import sourcing_overview
 
 
 class CatalogViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
@@ -17,7 +22,16 @@ class CatalogViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.
     queryset = Product.objects.filter(is_active=True).select_related("supplier").prefetch_related("variants")
 
 
-class StoreProductViewSet(viewsets.ModelViewSet):
+class SourcingOverviewView(WorkspaceMixin, APIView):
+    """Margins, ingredient compliance, and supplier sync for the sourcing desk."""
+
+    permission_classes = (IsAuthenticated, IsTenantMember)
+
+    def get(self, request: Request) -> Response:
+        return Response(sourcing_overview(request.tenant))
+
+
+class StoreProductViewSet(WorkspaceMixin, viewsets.ModelViewSet):
     """Listings published by the active store."""
 
     serializer_class = StoreProductSerializer

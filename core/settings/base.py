@@ -51,6 +51,10 @@ INSTALLED_APPS = [
     "apps.tenants",
     "apps.products",
     "apps.orders",
+    "apps.marketing",
+    "apps.storefront",
+    "apps.customers",
+    "apps.analytics",
 ]
 
 MIDDLEWARE = [

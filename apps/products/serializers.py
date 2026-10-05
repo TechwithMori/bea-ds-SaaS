@@ -8,7 +8,7 @@ from .models import Product, ProductVariant, StoreProduct, Supplier
 class SupplierSerializer(serializers.ModelSerializer):
     class Meta:
         model = Supplier
-        fields = ("id", "name", "code", "is_active")
+        fields = ("id", "name", "code", "is_active", "sync_status", "last_synced_at")
 
 
 class ProductVariantSerializer(serializers.ModelSerializer):
@@ -43,6 +43,8 @@ class ProductSerializer(serializers.ModelSerializer):
             "stock_level",
             "ingredients",
             "specifications",
+            "compliance_status",
+            "compliance_notes",
             "supplier",
             "variants",
             "is_active",
