@@ -4,9 +4,9 @@ Multi-tenant B2B dropshipping API for automated beauty and cosmetics stores.
 
 ## Tenancy
 
-Shared PostgreSQL schema, not schema-per-tenant. Every store-owned row has a `tenant` foreign key. Send `X-Tenant-Slug` on store-scoped requests. The JWT authenticator resolves that header after the token is validated, because DRF authentication runs after Django middleware. Creating the first store does not require the header.
+Set `CUSTOMER_NAME` for a deployment. The API then uses the Postgres schema `{customer_name}_schema` instead of `public`, and creates that schema on connect. Until the variable is set, Django stays on `public`.
 
-Schema-per-tenant (`django-tenants`) is the wrong default for this MVP: it fans migrations across schemas and complicates Celery before the catalog and order model have settled. Move a tenant to its own schema only if a contract requires a hard database boundary.
+Inside that schema, every store-owned row still has a `tenant` foreign key. Send `X-Tenant-Slug` on store-scoped requests. The JWT authenticator resolves that header after the token is validated, because DRF authentication runs after Django middleware. Creating the first store does not require the header. After you set `CUSTOMER_NAME`, recreate the web and worker containers and run `migrate` so tables are created in the new schema.
 
 ## Stack
 

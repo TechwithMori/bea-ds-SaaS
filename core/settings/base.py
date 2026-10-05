@@ -2,12 +2,11 @@
 
 Tenancy strategy
 ----------------
-MVP uses a shared PostgreSQL schema with a non-null ``tenant`` foreign key on
-every store-owned row. ``apps.tenants.authentication.TenantJWTAuthentication`` resolves the active
-store from the ``X-Tenant-Slug`` header (or the authenticated user's default
-store) and attaches it to ``request.tenant``. Querysets must filter on that
-tenant. Schema-per-tenant (django-tenants) is intentionally deferred: it adds
-connection routing and migration fan-out before the domain model is stable.
+``CUSTOMER_NAME`` selects one Postgres schema for this deployment,
+``{customer_name}_schema``, instead of ``public``. Store rows inside that
+schema still have a non-null ``tenant`` foreign key. ``TenantJWTAuthentication``
+resolves the active store from ``X-Tenant-Slug`` (or the user's default store)
+and attaches it to ``request.tenant``. Querysets must filter on that tenant.
 """
 
 from __future__ import annotations
@@ -16,6 +15,8 @@ from datetime import timedelta
 from pathlib import Path
 
 import environ
+
+from core.schema import schema_name_for_customer, use_customer_schema
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -90,6 +91,13 @@ TEMPLATES = [
 DATABASES = {"default": env.db("DATABASE_URL")}
 DATABASES["default"]["CONN_MAX_AGE"] = env.int("DB_CONN_MAX_AGE", default=60)
 DATABASES["default"]["CONN_HEALTH_CHECKS"] = True
+
+CUSTOMER_NAME = env("CUSTOMER_NAME", default="")
+CUSTOMER_SCHEMA = schema_name_for_customer(CUSTOMER_NAME)
+if CUSTOMER_SCHEMA:
+    DATABASES["default"].setdefault("OPTIONS", {})
+    DATABASES["default"]["OPTIONS"]["options"] = f"-c search_path={CUSTOMER_SCHEMA}"
+    use_customer_schema(CUSTOMER_SCHEMA)
 
 AUTH_USER_MODEL = "authentication.User"
 
