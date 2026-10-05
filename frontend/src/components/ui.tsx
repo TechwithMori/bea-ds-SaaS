@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useI18n } from "../i18n/LanguageContext";
 
 export function PageHeader({ desk, title, lede }: { desk: string; title: string; lede: string }) {
   return (
@@ -11,10 +12,11 @@ export function PageHeader({ desk, title, lede }: { desk: string; title: string;
 }
 
 export function SampleNote({ show, children }: { show: boolean; children?: ReactNode }) {
+  const { t } = useI18n();
   if (!show) return null;
   return (
     <p className="mb-6 rounded-full border border-gold/30 bg-[#f6efe2] px-4 py-2 text-sm text-ink">
-      {children ?? "Illustrative figures. Live records replace them as soon as this desk has some."}
+      {children ?? t("sampleFigures")}
     </p>
   );
 }

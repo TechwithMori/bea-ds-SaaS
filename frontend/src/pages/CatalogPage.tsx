@@ -4,10 +4,12 @@ import type { ListingRow, SourcingOverview } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
 import { Badge, PageHeader, Panel, SampleNote, toneFor } from "../components/ui";
 import { sampleSourcing } from "../data/samples";
-import { money, titleCase } from "../lib/format";
+import { useI18n } from "../i18n/LanguageContext";
+import { formatNumber, money, percent } from "../lib/format";
 
 export default function CatalogPage() {
   const { preview, tenant } = useAuth();
+  const { lang, t, word } = useI18n();
   const [data, setData] = useState<SourcingOverview>(sampleSourcing);
   const [catalogSample, setCatalogSample] = useState(true);
   const [listingSample, setListingSample] = useState(true);
@@ -64,65 +66,69 @@ export default function CatalogPage() {
   return (
     <div>
       <PageHeader
-        desk="Sourcing desk"
-        title="Catalog"
-        lede="Vetted cosmetics, the gap between wholesale and retail, ingredient compliance, and whether the supplier feed is current."
+        desk={t("sourcingDesk")}
+        title={t("catalog")}
+        lede={t("catalogLede")}
       />
       <SampleNote show={catalogSample}>
-        {catalogSample ? "Illustrative catalog. Supplier products replace this once they are loaded." : null}
+        {catalogSample ? t("sampleCatalog") : null}
       </SampleNote>
       <div className="mb-4 flex flex-wrap gap-2">
         {data.suppliers.map((supplier) => (
           <span key={supplier.id} className="inline-flex items-center gap-2 rounded-full border border-line bg-cream px-3 py-1.5 text-sm">
             {supplier.name}
-            <Badge tone={toneFor(supplier.sync_status)}>{supplier.sync_status === "ok" ? "Synced" : titleCase(supplier.sync_status)}</Badge>
+            <Badge tone={toneFor(supplier.sync_status)}>{word(supplier.sync_status)}</Badge>
           </span>
         ))}
       </div>
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
-        <Panel><p className="text-sm text-ink-soft">Compliant</p><p className="font-display text-3xl">{data.compliance.compliant}</p></Panel>
-        <Panel><p className="text-sm text-ink-soft">In review</p><p className="font-display text-3xl">{data.compliance.pending_review}</p></Panel>
-        <Panel><p className="text-sm text-ink-soft">Restricted</p><p className="font-display text-3xl">{data.compliance.restricted}</p></Panel>
+        <Panel><p className="text-sm text-ink-soft">{t("compliant")}</p><p className="font-display text-3xl">{formatNumber(data.compliance.compliant, lang)}</p></Panel>
+        <Panel><p className="text-sm text-ink-soft">{t("inReview")}</p><p className="font-display text-3xl">{formatNumber(data.compliance.pending_review, lang)}</p></Panel>
+        <Panel><p className="text-sm text-ink-soft">{t("restricted")}</p><p className="font-display text-3xl">{formatNumber(data.compliance.restricted, lang)}</p></Panel>
       </div>
       <Panel className="overflow-x-auto">
-        <table className="w-full min-w-[720px] text-left text-sm">
+        <table className="w-full min-w-[720px] text-start text-sm">
           <thead className="text-[11px] uppercase tracking-[0.16em] text-ink-soft">
             <tr>
-              <th className="pb-3 font-normal">Product</th>
-              <th className="pb-3 font-normal">Wholesale</th>
-              <th className="pb-3 font-normal">Retail</th>
-              <th className="pb-3 font-normal">Margin</th>
-              <th className="pb-3 font-normal">Stock</th>
-              <th className="pb-3 font-normal">Compliance</th>
+              <th className="pb-3 font-normal">{t("product")}</th>
+              <th className="pb-3 font-normal">{t("wholesale")}</th>
+              <th className="pb-3 font-normal">{t("retail")}</th>
+              <th className="pb-3 font-normal">{t("margin")}</th>
+              <th className="pb-3 font-normal">{t("stock")}</th>
+              <th className="pb-3 font-normal">{t("compliance")}</th>
             </tr>
           </thead>
           <tbody>
             {data.catalog.map((product) => (
               <tr key={product.id} className="border-t border-line">
-                <td className="py-3 pr-4">
+                <td className="py-3 pe-4">
                   <p>{product.title}</p>
-                  <p className="text-xs text-ink-soft">{titleCase(product.category)} · {product.ingredients.join(", ") || "No ingredient list"}</p>
+                  <p className="text-xs text-ink-soft">{word(product.category)} · {product.ingredients.join(", ") || t("noIngredients")}</p>
                   {product.compliance_notes ? <p className="text-xs text-[#8a6232]">{product.compliance_notes}</p> : null}
                 </td>
-                <td>{money(product.wholesale_price, tenant?.currency)}</td>
-                <td>{money(product.suggested_retail_price, tenant?.currency)}</td>
-                <td>{product.margin_percent}%</td>
-                <td>{product.stock_level}</td>
-                <td><Badge tone={toneFor(product.compliance_status)}>{titleCase(product.compliance_status)}</Badge></td>
+                <td>{money(product.wholesale_price, tenant?.currency, lang)}</td>
+                <td>{money(product.suggested_retail_price, tenant?.currency, lang)}</td>
+                <td>{percent(product.margin_percent, lang)}</td>
+                <td>{formatNumber(product.stock_level, lang)}</td>
+                <td><Badge tone={toneFor(product.compliance_status)}>{word(product.compliance_status)}</Badge></td>
               </tr>
             ))}
           </tbody>
         </table>
       </Panel>
-      <h2 className="mb-3 mt-8 font-display text-2xl">Your listings</h2>
-      <SampleNote show={listingSample && !catalogSample}>These listings are an example until you publish variants into the store.</SampleNote>
+      <h2 className="mb-3 mt-8 font-display text-2xl">{t("yourListings")}</h2>
+      <SampleNote show={listingSample && !catalogSample}>{t("sampleListings")}</SampleNote>
       <div className="grid gap-3">
         {data.listings.map((listing) => (
           <Panel key={listing.id} className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p>{listing.title} <span className="text-ink-soft">/ {listing.variant_name}</span></p>
               <p className="text-sm text-ink-soft">
-                {money(listing.wholesale_price, tenant?.currency)} wholesale · {money(listing.retail_price, tenant?.currency)} retail · {listing.margin_percent}% margin
+                {t("wholesaleRetail", {
+                  wholesale: money(listing.wholesale_price, tenant?.currency, lang),
+                  retail: money(listing.retail_price, tenant?.currency, lang),
+                  margin: percent(listing.margin_percent, lang),
+                })}
               </p>
             </div>
             <button
@@ -130,7 +136,7 @@ export default function CatalogPage() {
               onClick={() => void togglePublished(listing)}
               className={`rounded-full px-4 py-2 text-sm ${listing.is_published ? "bg-moss text-cream" : "border border-line"}`}
             >
-              {listing.is_published ? "Published" : "Unpublished"}
+              {listing.is_published ? t("published") : t("unpublished")}
             </button>
           </Panel>
         ))}

@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { useAuth } from "./auth/AuthContext";
+import { useI18n } from "./i18n/LanguageContext";
 import AppShell from "./components/AppShell";
 import CatalogPage from "./pages/CatalogPage";
 import CustomersPage from "./pages/CustomersPage";
@@ -12,7 +13,8 @@ import StorefrontPage from "./pages/StorefrontPage";
 
 function Gate() {
   const { ready, user, preview } = useAuth();
-  if (!ready) return <p className="p-8 text-sm text-ink-soft">Opening the desks…</p>;
+  const { t } = useI18n();
+  if (!ready) return <p className="p-8 text-sm text-ink-soft">{t("openingDesks")}</p>;
   if (!user && !preview) return <Navigate to="/login" replace />;
   return <AppShell />;
 }

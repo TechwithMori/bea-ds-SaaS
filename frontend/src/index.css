@@ -9,6 +9,25 @@ body {
   color: #241910;
 }
 
+html[lang="fa"] body {
+  font-family: Vazirmatn, Outfit, ui-sans-serif, sans-serif;
+}
+
+html[lang="fa"] .font-display {
+  font-family: Vazirmatn, sans-serif;
+  font-style: normal;
+}
+
+html[lang="fa"] .font-display.italic {
+  font-family: Fraunces, Georgia, serif;
+  font-style: italic;
+}
+
+html[lang="fa"] .uppercase {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
 button,
 input,
 select,

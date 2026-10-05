@@ -1,13 +1,20 @@
 <!doctype html>
-<html lang="en">
+<html lang="fa" dir="rtl">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Bea Drops</title>
+    <script>
+      try {
+        var lang = localStorage.getItem("bea.lang") === "en" ? "en" : "fa";
+        document.documentElement.lang = lang === "fa" ? "fa" : "en";
+        document.documentElement.dir = lang === "fa" ? "rtl" : "ltr";
+      } catch (e) {}
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,460;9..144,560&family=Outfit:wght@340;460;560&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,460;0,9..144,560;1,9..144,460&family=Outfit:wght@340;460;560&family=Vazirmatn:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
   </head>
